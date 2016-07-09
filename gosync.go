@@ -54,7 +54,7 @@ func main() {
 		var maxLen, pLen int64
 		if len(os.Args) > 2 {
 			maxLen, _ = strconv.ParseInt(os.Args[2], 10, 64)
-			maxLen *= 1024 * 1024
+			maxLen *= 1073741824
 		} else {
 			maxLen = -1
 		}
