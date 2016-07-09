@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -64,9 +65,8 @@ func main() {
 			}
 			files = nfs
 		}
-		for _, v := range files {
-			fmt.Printf("FILE [%s]  %s  %v\n", v.name, v.time.Format(time.RFC3339), v.size)
-		}
+		b, _ = json.Marshal(files)
+		fmt.Printf("%s", string(b))
 	} else {
 		fmt.Printf("FORMAT\n  gosync list\n  gosync hash\n")
 	}
