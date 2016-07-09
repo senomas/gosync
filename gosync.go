@@ -12,9 +12,9 @@ import (
 )
 
 type fileData struct {
-	name string
-	time time.Time
-	size int64
+	Name string
+	Time time.Time
+	Size int64
 }
 
 type fileDatas []fileData
@@ -24,7 +24,7 @@ func (files fileDatas) Len() int {
 }
 
 func (files fileDatas) Less(i, j int) bool {
-	return files[j].time.Before(files[i].time)
+	return files[j].Time.Before(files[i].Time)
 }
 
 func (files fileDatas) Swap(i, j int) {
@@ -46,7 +46,7 @@ func main() {
 			} else {
 				if !strings.HasPrefix(info.Name(), ".") {
 					fname := fmt.Sprintf("%s%c%s", path, os.PathSeparator, info.Name())
-					files = append(files, fileData{name: fname, time: info.ModTime(), size: info.Size()})
+					files = append(files, fileData{Name: fname, Time: info.ModTime(), Size: info.Size()})
 				}
 			}
 			return err
@@ -58,7 +58,7 @@ func main() {
 			maxLen *= 1073741824
 			var nfs fileDatas
 			for _, v := range files {
-				pLen += v.size
+				pLen += v.Size
 				if maxLen == -1 || pLen < maxLen {
 					nfs = append(nfs, v)
 				}
