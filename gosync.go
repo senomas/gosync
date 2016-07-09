@@ -65,10 +65,7 @@ func main() {
 			files = nfs
 		}
 		for _, v := range files {
-			pLen += v.size
-			if maxLen == -1 || pLen < maxLen {
-				fmt.Printf("FILE [%s]  %s  %v\n", v.name, v.time.Format(time.RFC3339), v.size)
-			}
+			fmt.Printf("FILE [%s]  %s  %v\n", v.name, v.time.Format(time.RFC3339), v.size)
 		}
 	} else {
 		fmt.Printf("FORMAT\n  gosync list\n  gosync hash\n")
