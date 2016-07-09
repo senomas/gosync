@@ -99,7 +99,6 @@ func main() {
 		i := 0
 		for ; ; i++ {
 			n, err := f.Read(buf)
-			fmt.Printf("READ %v %v %v\n", i, n, err)
 			if err == io.EOF {
 				break
 			} else if err != nil {
