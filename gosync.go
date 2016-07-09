@@ -6,12 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"os/user"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 type fileData struct {
@@ -29,6 +33,16 @@ type fhash struct {
 	Name string
 	Size int64
 	Hash []string
+}
+
+func publicKeyFile(file string) ssh.AuthMethod {
+	buffer, err := ioutil.ReadFile(file)
+	check(err)
+
+	key, err := ssh.ParsePrivateKey(buffer)
+	check(err)
+
+	return ssh.PublicKeys(key)
 }
 
 func (inf info) Len() int {
@@ -50,6 +64,9 @@ func check(e error) {
 }
 
 func main() {
+	usr, err := user.Current()
+	check(err)
+
 	if len(os.Args) > 1 && os.Args[1] == "list" {
 		fp, _ := filepath.Abs(".")
 		res := info{Path: fp}
@@ -117,7 +134,51 @@ func main() {
 
 		b, _ := json.Marshal(res)
 		fmt.Println(string(b))
+	} else if len(os.Args) == 4 && os.Args[1] == "get" {
+		fp, _ := filepath.Abs(os.Args[2])
+
+		f, err := os.Open(fp)
+		check(err)
+
+		part, err := strconv.ParseInt(os.Args[3], 10, 64)
+		check(err)
+
+		_, err = f.Seek(part*1048576, 0)
+		check(err)
+
+		buf := make([]byte, 1024)
+
+		for i := 0; i < 1024; i++ {
+			n, err := f.Read(buf)
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				panic(err)
+			} else {
+				os.Stdout.Write(buf[:n])
+			}
+		}
+	} else if len(os.Args) == 5 && os.Args[1] == "sync" {
+		sshConfig := &ssh.ClientConfig{
+			User: os.Args[2],
+			Auth: []ssh.AuthMethod{
+				publicKeyFile(usr.HomeDir + "/.ssh/id_rsa"),
+			},
+		}
+
+		conn, err := ssh.Dial("tcp", os.Args[3], sshConfig)
+		check(err)
+
+		session, err := conn.NewSession()
+		check(err)
+
+		stdout, err := session.StdoutPipe()
+		check(err)
+		go io.Copy(os.Stdout, stdout)
+
+		err = session.Run("ls -al")
+		check(err)
 	} else {
-		fmt.Printf("FORMAT\n  gosync list [max size in GB]\n  gosync hash <file name>\n  gosync get <file name> <part>\n")
+		fmt.Printf("FORMAT\n  gosync list [max size in GB]\n  gosync hash <file name>\n  gosync get <file name> <part>\n  gosync sync <user> <host> <path>\n")
 	}
 }
