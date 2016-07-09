@@ -31,7 +31,9 @@ func (files fileDatas) Swap(i, j int) {
 
 func main() {
 	var files fileDatas
-	filepath.Walk("/Users/seno/workspace/microservice", func(path string, info os.FileInfo, err error) error {
+	fp, _ := filepath.Abs(".")
+	fmt.Printf("PATH [%s]\n", fp)
+	filepath.Walk(fp, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		} else if info.IsDir() {
