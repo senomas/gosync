@@ -65,7 +65,7 @@ func main() {
 			}
 			files = nfs
 		}
-		b, _ = json.Marshal(files)
+		b, _ := json.Marshal(files)
 		fmt.Printf("%s", string(b))
 	} else {
 		fmt.Printf("FORMAT\n  gosync list\n  gosync hash\n")
