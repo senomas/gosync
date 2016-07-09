@@ -184,8 +184,7 @@ func main() {
 		err = session.Run(cmd)
 		check(err)
 
-		err = session.Wait()
-		check(err)
+		session.Close()
 	} else {
 		fmt.Printf("FORMAT\n  gosync list <max size in GB> <path>\n  gosync hash <file name>\n  gosync get <file name> <part>\n  gosync sync <user> <host> <path> [max size in GB]\n")
 	}
