@@ -51,12 +51,18 @@ func main() {
 			return err
 		})
 		sort.Sort(files)
-		var maxLen, pLen int64
 		if len(os.Args) > 2 {
+			var maxLen, pLen int64
 			maxLen, _ = strconv.ParseInt(os.Args[2], 10, 64)
 			maxLen *= 1073741824
-		} else {
-			maxLen = -1
+			var nfs fileDatas
+			for _, v := range files {
+				pLen += v.size
+				if maxLen == -1 || pLen < maxLen {
+					nfs = append(nfs, v)
+				}
+			}
+			files = nfs
 		}
 		for _, v := range files {
 			pLen += v.size
