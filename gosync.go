@@ -67,8 +67,8 @@ func main() {
 	usr, err := user.Current()
 	check(err)
 
-	if len(os.Args) > 1 && os.Args[1] == "list" {
-		fp, _ := filepath.Abs(".")
+	if len(os.Args) > 2 && os.Args[1] == "list" {
+		fp, _ := filepath.Abs(os.Args[2])
 		res := info{Path: fp}
 		filepath.Walk(fp, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -176,9 +176,9 @@ func main() {
 		check(err)
 		go io.Copy(os.Stdout, stdout)
 
-		err = session.Run("ls -al")
+		err = session.Run("gosync list ")
 		check(err)
 	} else {
-		fmt.Printf("FORMAT\n  gosync list [max size in GB]\n  gosync hash <file name>\n  gosync get <file name> <part>\n  gosync sync <user> <host> <path>\n")
+		fmt.Printf("FORMAT\n  gosync list <path> [max size in GB]\n  gosync hash <file name>\n  gosync get <file name> <part>\n  gosync sync <user> <host> <path>\n")
 	}
 }
