@@ -60,7 +60,7 @@ func main() {
 		}
 		for _, v := range files {
 			pLen += v.size
-			fmt.Printf("CHECK %v  %v", pLen, maxLen)
+			fmt.Printf("CHECK %v  %v\n", pLen, maxLen)
 			if maxLen == -1 || pLen < maxLen {
 				fmt.Printf("FILE [%s]  %s  %v\n", v.name, v.time.Format(time.RFC3339), v.size)
 			}
