@@ -85,9 +85,9 @@ func main() {
 			return err
 		})
 		sort.Sort(res)
-		if len(os.Args) > 2 {
+		if len(os.Args) > 3 {
 			var maxLen, pLen int64
-			maxLen, _ = strconv.ParseInt(os.Args[2], 10, 64)
+			maxLen, _ = strconv.ParseInt(os.Args[3], 10, 64)
 			maxLen *= 1073741824
 			var nfs []fileData
 			for _, v := range res.Files {
@@ -176,7 +176,7 @@ func main() {
 		check(err)
 		go io.Copy(os.Stdout, stdout)
 
-		err = session.Run("gosync list ")
+		err = session.Run("gosync list " + os.Args[4])
 		check(err)
 	} else {
 		fmt.Printf("FORMAT\n  gosync list <path> [max size in GB]\n  gosync hash <file name>\n  gosync get <file name> <part>\n  gosync sync <user> <host> <path>\n")
