@@ -19,26 +19,25 @@ type fileData struct {
 
 type info struct {
 	Path  string
-	files []fileData
+	Files []fileData
 }
 
 func (inf info) Len() int {
-	return len(inf.files)
+	return len(inf.Files)
 }
 
 func (inf info) Less(i, j int) bool {
-	return inf.files[j].Time.Before(inf.files[i].Time)
+	return inf.Files[j].Time.Before(inf.Files[i].Time)
 }
 
 func (inf info) Swap(i, j int) {
-	inf.files[i], inf.files[j] = inf.files[j], inf.files[i]
+	inf.Files[i], inf.Files[j] = inf.Files[j], inf.Files[i]
 }
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "list" {
 		fp, _ := filepath.Abs(".")
 		res := info{Path: fp}
-		fmt.Printf("PATH [%s]\n", fp)
 		filepath.Walk(fp, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -49,7 +48,7 @@ func main() {
 			} else {
 				if !strings.HasPrefix(info.Name(), ".") {
 					fname := fmt.Sprintf("%s%c%s", path, os.PathSeparator, info.Name())
-					res.files = append(res.files, fileData{Name: fname, Time: info.ModTime(), Size: info.Size()})
+					res.Files = append(res.Files, fileData{Name: fname, Time: info.ModTime(), Size: info.Size()})
 				}
 			}
 			return err
@@ -60,13 +59,13 @@ func main() {
 			maxLen, _ = strconv.ParseInt(os.Args[2], 10, 64)
 			maxLen *= 1073741824
 			var nfs []fileData
-			for _, v := range res.files {
+			for _, v := range res.Files {
 				pLen += v.Size
 				if maxLen == -1 || pLen < maxLen {
 					nfs = append(nfs, v)
 				}
 			}
-			res.files = nfs
+			res.Files = nfs
 		}
 		b, _ := json.Marshal(res)
 		fmt.Println(string(b))
