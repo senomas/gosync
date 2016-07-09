@@ -1,8 +1,11 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -22,6 +25,12 @@ type info struct {
 	Files []fileData
 }
 
+type fhash struct {
+	Name string
+	Size int64
+	Hash []string
+}
+
 func (inf info) Len() int {
 	return len(inf.Files)
 }
@@ -32,6 +41,12 @@ func (inf info) Less(i, j int) bool {
 
 func (inf info) Swap(i, j int) {
 	inf.Files[i], inf.Files[j] = inf.Files[j], inf.Files[i]
+}
+
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
 }
 
 func main() {
@@ -47,8 +62,7 @@ func main() {
 				}
 			} else {
 				if !strings.HasPrefix(info.Name(), ".") {
-					fname := fmt.Sprintf("%s%c%s", path, os.PathSeparator, info.Name())
-					res.Files = append(res.Files, fileData{Name: fname, Time: info.ModTime(), Size: info.Size()})
+					res.Files = append(res.Files, fileData{Name: path, Time: info.ModTime(), Size: info.Size()})
 				}
 			}
 			return err
@@ -67,6 +81,41 @@ func main() {
 			}
 			res.Files = nfs
 		}
+		b, _ := json.Marshal(res)
+		fmt.Println(string(b))
+	} else if len(os.Args) == 3 && os.Args[1] == "hash" {
+		fp, _ := filepath.Abs(os.Args[2])
+		finfo, err := os.Stat(fp)
+		check(err)
+
+		hasher := sha256.New()
+		res := fhash{Name: fp, Size: finfo.Size()}
+
+		f, err := os.Open(fp)
+		check(err)
+
+		buf := make([]byte, 1024)
+
+		i := 0
+		for ; ; i++ {
+			n, err := f.Read(buf)
+			fmt.Printf("READ %v %v %v\n", i, n, err)
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				panic(err)
+			} else {
+				hasher.Write(buf[:n])
+				if i == 1024 {
+					res.Hash = append(res.Hash, base64.StdEncoding.EncodeToString(hasher.Sum(nil)))
+					i = 0
+				}
+			}
+		}
+		if i > 0 {
+			res.Hash = append(res.Hash, base64.StdEncoding.EncodeToString(hasher.Sum(nil)))
+		}
+
 		b, _ := json.Marshal(res)
 		fmt.Println(string(b))
 	} else {
