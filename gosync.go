@@ -53,7 +53,8 @@ func main() {
 		sort.Sort(files)
 		var maxLen, pLen int64
 		if len(os.Args) > 2 {
-			maxLen = strconv.ParseInt(os.Args[2], 10, 64) * 1024
+			maxLen, _ = strconv.ParseInt(os.Args[2], 10, 64)
+			maxLen *= 1024 * 1024
 		} else {
 			maxLen = -1
 		}
