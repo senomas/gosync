@@ -159,31 +159,44 @@ func main() {
 			}
 		}
 	} else if len(os.Args) >= 5 && os.Args[1] == "sync" {
-		sshConfig := &ssh.ClientConfig{
-			User: os.Args[2],
-			Auth: []ssh.AuthMethod{
-				publicKeyFile(usr.HomeDir + "/.ssh/id_rsa"),
-			},
+		ssh := &easyssh.MakeConfig{
+			User:   "john",
+			Server: "example.com",
+			// Optional key or Password without either we try to contact your agent SOCKET
+			Key:  "/.ssh/id_rsa",
+			Port: "22",
 		}
 
-		conn, err := ssh.Dial("tcp", os.Args[3], sshConfig)
+		// Call Run method with command you want to run on remote server.
+		response, err := ssh.Run("ps ax")
 		check(err)
+		fmt.Println(response)
 
-		session, err := conn.NewSession()
-		check(err)
-		defer session.Close()
-
-		stdout, err := session.StdoutPipe()
-		check(err)
-		go io.Copy(os.Stdout, stdout)
-
-		cmd := "gosync list"
-		for i, len := 4, len(os.Args); i < len; i++ {
-			cmd += " " + os.Args[i]
-		}
-		fmt.Printf("EXEC [%s]\n", cmd)
-		err = session.Run(cmd)
-		check(err)
+		// sshConfig := &ssh.ClientConfig{
+		// 	User: os.Args[2],
+		// 	Auth: []ssh.AuthMethod{
+		// 		publicKeyFile(usr.HomeDir + "/.ssh/id_rsa"),
+		// 	},
+		// }
+		//
+		// conn, err := ssh.Dial("tcp", os.Args[3], sshConfig)
+		// check(err)
+		//
+		// session, err := conn.NewSession()
+		// check(err)
+		// defer session.Close()
+		//
+		// stdout, err := session.StdoutPipe()
+		// check(err)
+		// go io.Copy(os.Stdout, stdout)
+		//
+		// cmd := "gosync list"
+		// for i, len := 4, len(os.Args); i < len; i++ {
+		// 	cmd += " " + os.Args[i]
+		// }
+		// fmt.Printf("EXEC [%s]\n", cmd)
+		// err = session.Run(cmd)
+		// check(err)
 	} else {
 		fmt.Printf("FORMAT\n  gosync list <max size in GB> <path>\n  gosync hash <file name>\n  gosync get <file name> <part>\n  gosync sync <user> <host> <path> [max size in GB]\n")
 	}
