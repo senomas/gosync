@@ -25,7 +25,6 @@ type fileData struct {
 }
 
 type info struct {
-	Path  string
 	Files []fileData
 }
 
@@ -67,37 +66,38 @@ func main() {
 	usr, err := user.Current()
 	check(err)
 
-	if len(os.Args) > 2 && os.Args[1] == "list" {
-		fp, _ := filepath.Abs(os.Args[2])
-		res := info{Path: fp}
-		filepath.Walk(fp, func(path string, info os.FileInfo, err error) error {
-			if err != nil {
+	res := info{}
+	if len(os.Args) > 3 && os.Args[1] == "list" {
+		for i, l := 3, len(os.Args); i < l; i++ {
+			fp, _ := filepath.Abs(os.Args[i])
+			filepath.Walk(fp, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				} else if info.IsDir() {
+					if strings.HasPrefix(info.Name(), ".") {
+						return filepath.SkipDir
+					}
+				} else {
+					if !strings.HasPrefix(info.Name(), ".") {
+						res.Files = append(res.Files, fileData{Name: path, Time: info.ModTime(), Size: info.Size()})
+					}
+				}
 				return err
-			} else if info.IsDir() {
-				if strings.HasPrefix(info.Name(), ".") {
-					return filepath.SkipDir
-				}
-			} else {
-				if !strings.HasPrefix(info.Name(), ".") {
-					res.Files = append(res.Files, fileData{Name: path, Time: info.ModTime(), Size: info.Size()})
-				}
-			}
-			return err
-		})
-		sort.Sort(res)
-		if len(os.Args) > 3 {
-			var maxLen, pLen int64
-			maxLen, _ = strconv.ParseInt(os.Args[3], 10, 64)
-			maxLen *= 1073741824
-			var nfs []fileData
-			for _, v := range res.Files {
-				pLen += v.Size
-				if maxLen == -1 || pLen < maxLen {
-					nfs = append(nfs, v)
-				}
-			}
-			res.Files = nfs
+			})
 		}
+		sort.Sort(res)
+		var maxLen, pLen int64
+		maxLen, _ = strconv.ParseInt(os.Args[2], 10, 64)
+		maxLen *= 1073741824
+		var nfs []fileData
+		for _, v := range res.Files {
+			pLen += v.Size
+			if maxLen == -1 || pLen < maxLen {
+				nfs = append(nfs, v)
+			}
+		}
+		res.Files = nfs
+
 		b, _ := json.Marshal(res)
 		fmt.Println(string(b))
 	} else if len(os.Args) == 3 && os.Args[1] == "hash" {
@@ -158,7 +158,7 @@ func main() {
 				os.Stdout.Write(buf[:n])
 			}
 		}
-	} else if len(os.Args) == 5 && os.Args[1] == "sync" {
+	} else if len(os.Args) >= 5 && os.Args[1] == "sync" {
 		sshConfig := &ssh.ClientConfig{
 			User: os.Args[2],
 			Auth: []ssh.AuthMethod{
@@ -176,9 +176,14 @@ func main() {
 		check(err)
 		go io.Copy(os.Stdout, stdout)
 
-		err = session.Run("gosync list " + os.Args[4])
+		cmd := "gosync list"
+		for i, len := 4, len(os.Args); i < len; i++ {
+			cmd += " " + os.Args[i]
+		}
+		fmt.Printf("EXEC [%s]\n", cmd)
+		err = session.Run(cmd)
 		check(err)
 	} else {
-		fmt.Printf("FORMAT\n  gosync list <path> [max size in GB]\n  gosync hash <file name>\n  gosync get <file name> <part>\n  gosync sync <user> <host> <path>\n")
+		fmt.Printf("FORMAT\n  gosync list <max size in GB> <path>\n  gosync hash <file name>\n  gosync get <file name> <part>\n  gosync sync <user> <host> <path> [max size in GB]\n")
 	}
 }
