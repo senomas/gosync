@@ -66,8 +66,8 @@ func main() {
 	usr, err := user.Current()
 	check(err)
 
-	res := info{}
 	if len(os.Args) > 3 && os.Args[1] == "list" {
+		res := info{}
 		for i, l := 3, len(os.Args); i < l; i++ {
 			fp, _ := filepath.Abs(os.Args[i])
 			filepath.Walk(fp, func(path string, info os.FileInfo, err error) error {
