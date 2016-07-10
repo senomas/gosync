@@ -52,6 +52,7 @@ func main() {
 			}
 		}
 		res.Files = nfs
+		sort.Reverse(res)
 
 		b, _ := json.Marshal(res)
 		fmt.Println(string(b))
@@ -75,12 +76,14 @@ func main() {
 			}
 			if err == io.EOF {
 				res.Hash = append(res.Hash, hasher.Sum(nil))
+				hasher.Reset()
 				break
 			} else if err != nil {
 				panic(err)
 			} else {
 				if i == 63 {
 					res.Hash = append(res.Hash, hasher.Sum(nil))
+					hasher.Reset()
 					i = 0
 				}
 			}

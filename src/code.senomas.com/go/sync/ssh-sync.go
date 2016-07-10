@@ -141,7 +141,7 @@ func (sync *Sync) Sync(maxSize int, paths []string) error {
 
 func (sync *Sync) copy(remote FileData, local string) error {
 	if stat, err := os.Stat(local); os.IsNotExist(err) {
-		fmt.Printf("COPY\n  LOCAL: [%s]\n", local)
+		fmt.Printf("Copy %s\n", local)
 		hash, err := sync.hash(remote.Name)
 		if err != nil {
 			return err
@@ -152,7 +152,7 @@ func (sync *Sync) copy(remote FileData, local string) error {
 		}
 	} else {
 		if stat.Size() == remote.Size {
-			fmt.Printf("EXIST\n  LOCAL: [%s]\n", remote.Name)
+			fmt.Printf("Skip %s\n", remote.Name)
 		} else {
 			fmt.Printf("CONTINUE\n  LOCAL: [%s]\n  SIZE REMOTE %v - LOCAL %v\n\n", remote.Name, remote.Size, stat.Size())
 		}
@@ -173,6 +173,7 @@ func (sync *Sync) get(remote *FileHash, local string) error {
 	}
 	defer fw.Close()
 
+	pl := len(remote.Hash)
 	for k, v := range remote.Hash {
 		session, err := sync.client.NewSession()
 		if err != nil {
@@ -188,7 +189,7 @@ func (sync *Sync) get(remote *FileHash, local string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("  GET PART %v\n", k)
+		fmt.Printf("  Part %v/%v\n", k+1, pl)
 
 		bb := b.Bytes()
 
@@ -197,16 +198,14 @@ func (sync *Sync) get(remote *FileHash, local string) error {
 
 		hv := hasher.Sum(nil)
 		if !bytes.Equal(v, hv) {
-			panic(fmt.Errorf("  INVALID HASH [%v]\n  %v\n  %v\n", b.Len(), v, hv))
+			panic(fmt.Errorf("Invalid hash [%v]\n  %v\n  %v\n", b.Len(), v, hv))
 		}
-		fmt.Printf("  VALID HASH\n")
 		fw.Write(bb)
 	}
 	err = fw.Sync()
 	fw.Close()
 
 	os.Rename(tempName, local)
-	fmt.Printf("  DONE\n")
 
 	return err
 }
