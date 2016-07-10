@@ -18,7 +18,7 @@ type FileDataList struct {
 type FileHash struct {
 	Name string
 	Size int64
-	Hash []string
+	Hash [][]byte
 }
 
 func (fl FileDataList) Len() int {

@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -79,13 +78,13 @@ func main() {
 			} else {
 				hasher.Write(buf[:n])
 				if i == 64 {
-					res.Hash = append(res.Hash, base64.StdEncoding.EncodeToString(hasher.Sum(nil)))
+					res.Hash = append(res.Hash, hasher.Sum(nil))
 					i = 0
 				}
 			}
 		}
 		if i > 0 {
-			res.Hash = append(res.Hash, base64.StdEncoding.EncodeToString(hasher.Sum(nil)))
+			res.Hash = append(res.Hash, hasher.Sum(nil))
 		}
 
 		b, _ := json.Marshal(res)
