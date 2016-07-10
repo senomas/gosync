@@ -9,8 +9,8 @@ push: build
 	git commit ; git push
 
 remote: push
-	ssh root@joker "bash --login -c 'cd ~/workspaces/gosync ; export GOPATH=~/.go:~/workspaces/gosync ; make rbuild'"
+	ssh root@joker "bash --login -c 'cd ~/workspaces/gosync ; export GOPATH=~/.go:~/workspaces/gosync ; make pull-build'"
 
-rbuild:
+pull-build:
 	git pull
 	go build src/gosync.go
