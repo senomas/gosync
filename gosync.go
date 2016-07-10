@@ -6,55 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
-	"os/user"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
-	"golang.org/x/crypto/ssh"
+	"code.senomas.com/go/sync"
 )
-
-type fileData struct {
-	Name string
-	Time time.Time
-	Size int64
-}
-
-type info struct {
-	Files []fileData
-}
-
-type fhash struct {
-	Name string
-	Size int64
-	Hash []string
-}
-
-func publicKeyFile(file string) ssh.AuthMethod {
-	buffer, err := ioutil.ReadFile(file)
-	check(err)
-
-	key, err := ssh.ParsePrivateKey(buffer)
-	check(err)
-
-	return ssh.PublicKeys(key)
-}
-
-func (inf info) Len() int {
-	return len(inf.Files)
-}
-
-func (inf info) Less(i, j int) bool {
-	return inf.Files[j].Time.Before(inf.Files[i].Time)
-}
-
-func (inf info) Swap(i, j int) {
-	inf.Files[i], inf.Files[j] = inf.Files[j], inf.Files[i]
-}
 
 func check(e error) {
 	if e != nil {
@@ -63,11 +23,8 @@ func check(e error) {
 }
 
 func main() {
-	usr, err := user.Current()
-	check(err)
-
 	if len(os.Args) > 3 && os.Args[1] == "list" {
-		res := info{}
+		res := sync.FileDataList{}
 		for i, l := 3, len(os.Args); i < l; i++ {
 			fp, _ := filepath.Abs(os.Args[i])
 			filepath.Walk(fp, func(path string, info os.FileInfo, err error) error {
@@ -79,7 +36,7 @@ func main() {
 					}
 				} else {
 					if !strings.HasPrefix(info.Name(), ".") {
-						res.Files = append(res.Files, fileData{Name: path, Time: info.ModTime(), Size: info.Size()})
+						res.Files = append(res.Files, sync.FileData{Name: path, Time: info.ModTime(), Size: info.Size()})
 					}
 				}
 				return err
@@ -89,7 +46,7 @@ func main() {
 		var maxLen, pLen int64
 		maxLen, _ = strconv.ParseInt(os.Args[2], 10, 64)
 		maxLen *= 1073741824
-		var nfs []fileData
+		var nfs []sync.FileData
 		for _, v := range res.Files {
 			pLen += v.Size
 			if maxLen == -1 || pLen < maxLen {
@@ -106,7 +63,7 @@ func main() {
 		check(err)
 
 		hasher := sha256.New()
-		res := fhash{Name: fp, Size: finfo.Size()}
+		res := sync.FileHash{Name: fp, Size: finfo.Size()}
 
 		f, err := os.Open(fp)
 		check(err)
@@ -159,44 +116,37 @@ func main() {
 			}
 		}
 	} else if len(os.Args) >= 5 && os.Args[1] == "sync" {
-		ssh := &easyssh.MakeConfig{
-			User:   "john",
-			Server: "example.com",
-			// Optional key or Password without either we try to contact your agent SOCKET
-			Key:  "/.ssh/id_rsa",
-			Port: "22",
+		sshSync := sync.Sync{}
+
+		err := sshSync.Open(os.Args[2])
+		check(err)
+
+		maxSize, err := strconv.Atoi(os.Args[3])
+		check(err)
+
+		re, err := regexp.Compile("^([^:]*)(\\:(.*))?$")
+		check(err)
+
+		var paths []string
+		for _, v := range os.Args[4:] {
+			px := re.FindStringSubmatch(v)
+			if px[3] == "" {
+				if !strings.HasSuffix(px[1], "/") {
+					px[1] += "/"
+				}
+				paths = append(paths, px[1])
+			} else {
+				if !strings.HasSuffix(px[3], "/") {
+					px[3] += "/"
+				}
+				paths = append(paths, px[3])
+			}
 		}
 
-		// Call Run method with command you want to run on remote server.
-		response, err := ssh.Run("ps ax")
+		res, err := sshSync.List(maxSize, paths)
 		check(err)
-		fmt.Println(response)
 
-		// sshConfig := &ssh.ClientConfig{
-		// 	User: os.Args[2],
-		// 	Auth: []ssh.AuthMethod{
-		// 		publicKeyFile(usr.HomeDir + "/.ssh/id_rsa"),
-		// 	},
-		// }
-		//
-		// conn, err := ssh.Dial("tcp", os.Args[3], sshConfig)
-		// check(err)
-		//
-		// session, err := conn.NewSession()
-		// check(err)
-		// defer session.Close()
-		//
-		// stdout, err := session.StdoutPipe()
-		// check(err)
-		// go io.Copy(os.Stdout, stdout)
-		//
-		// cmd := "gosync list"
-		// for i, len := 4, len(os.Args); i < len; i++ {
-		// 	cmd += " " + os.Args[i]
-		// }
-		// fmt.Printf("EXEC [%s]\n", cmd)
-		// err = session.Run(cmd)
-		// check(err)
+		fmt.Printf("RESULT %+v\n", res)
 	} else {
 		fmt.Printf("FORMAT\n  gosync list <max size in GB> <path>\n  gosync hash <file name>\n  gosync get <file name> <part>\n  gosync sync <user> <host> <path> [max size in GB]\n")
 	}
