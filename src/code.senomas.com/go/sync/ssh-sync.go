@@ -2,6 +2,7 @@ package sync
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -138,12 +139,15 @@ func (sync *Sync) Sync(maxSize int, paths []string) error {
 func (sync *Sync) copy(remote FileData, local string) error {
 	if stat, err := os.Stat(local); os.IsNotExist(err) {
 		fmt.Printf("COPY\n  LOCAL: [%s]\n\n", remote.Name)
-		res, err := sync.hash(remote.Name)
+		hash, err := sync.hash(remote.Name)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("HASH\n  LOCAL: [%s]\n%+v\n", remote.Name, res)
-		// path/to/whatever does not exist
+		fmt.Printf("HASH\n  LOCAL: [%s]\n%+v\n", remote.Name, hash)
+		err = sync.get(hash, local)
+		if err != nil {
+			return err
+		}
 	} else {
 		if stat.Size() == remote.Size {
 			fmt.Printf("EXIST\n  LOCAL: [%s]\n\n", remote.Name)
@@ -154,7 +158,37 @@ func (sync *Sync) copy(remote FileData, local string) error {
 	return nil
 }
 
-func (sync *Sync) get(remote FileHash, local string) error {
+func (sync *Sync) get(remote *FileHash, local string) error {
+	var b bytes.Buffer
+	hasher := sha256.New()
+
+	for k, v := range remote.Hash {
+		session, err := sync.client.NewSession()
+		if err != nil {
+			return err
+		}
+		defer session.Close()
+
+		session.Stdout = &b
+
+		cmd := fmt.Sprintf("gosync get %v", k)
+
+		err = session.Run(cmd)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("GET PART %v FILE %s\n", k, remote.Name)
+
+		bb := b.Bytes()
+
+		hasher.Reset()
+		hasher.Write(bb)
+
+		if !bytes.Equal(v, hasher.Sum(nil)) {
+			panic(fmt.Errorf("INVALID HASH %v (%v - %v) %s\n", k, len(bb), remote.Size, remote.Name))
+		}
+	}
+	fmt.Printf("VALID HASH %s\n", remote.Name)
 	return nil
 }
 
