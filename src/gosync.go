@@ -69,7 +69,7 @@ func main() {
 
 		buf := make([]byte, 1024)
 
-		for i := 0; ; i++ {
+		for i := 1; ; i++ {
 			n, err := f.Read(buf)
 			if n > 0 {
 				hasher.Write(buf[:n])
@@ -81,7 +81,7 @@ func main() {
 			} else if err != nil {
 				panic(err)
 			} else {
-				if i == 63 {
+				if i == 64 {
 					res.Hash = append(res.Hash, hasher.Sum(nil))
 					hasher.Reset()
 					i = 0
