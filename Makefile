@@ -9,7 +9,8 @@ push: build
 	git commit
 	git push
 
-remote: push
+remote: build
+	if git diff-index --cached --quiet HEAD --ignore-submodules ; then git add . ; git commit ; git push ; fi
 	ssh root@joker "bash --login -c 'cd ~/workspaces/gosync ; export GOPATH=~/.go:~/workspaces/gosync ; make rbuild'"
 
 rbuild:
