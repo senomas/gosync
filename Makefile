@@ -6,11 +6,9 @@ build:
 
 push: build
 	git add .
-	git commit
-	git push
+	git commit ; git push
 
-remote: build
-	git add . ; git commit ; git push
+remote: push
 	ssh root@joker "bash --login -c 'cd ~/workspaces/gosync ; export GOPATH=~/.go:~/workspaces/gosync ; make rbuild'"
 
 rbuild:
