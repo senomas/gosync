@@ -2,6 +2,7 @@ GOPATH=${HOME}/.go:${CURDIR}
 
 
 build:
+	export GOPATH
 	go build src/gosync.go
 
 push: build
