@@ -68,23 +68,22 @@ func main() {
 
 		buf := make([]byte, 1024)
 
-		i := 0
-		for ; ; i++ {
+		for i := 0; ; i++ {
 			n, err := f.Read(buf)
+			if n > 0 {
+				hasher.Write(buf[:n])
+			}
 			if err == io.EOF {
+				res.Hash = append(res.Hash, hasher.Sum(nil))
 				break
 			} else if err != nil {
 				panic(err)
 			} else {
-				hasher.Write(buf[:n])
-				if i == 64 {
+				if i == 63 {
 					res.Hash = append(res.Hash, hasher.Sum(nil))
 					i = 0
 				}
 			}
-		}
-		if i > 0 {
-			res.Hash = append(res.Hash, hasher.Sum(nil))
 		}
 
 		b, _ := json.Marshal(res)

@@ -126,7 +126,10 @@ func (sync *Sync) Sync(maxSize int, paths []string) error {
 			if strings.HasPrefix(v.Name, kv) {
 				fp, err := filepath.Abs(lpaths[k] + v.Name[len(kv):])
 				if err == nil {
-					sync.copy(v, fp)
+					err = sync.copy(v, fp)
+					if err != nil {
+						return err
+					}
 					break
 				}
 			}
@@ -138,19 +141,18 @@ func (sync *Sync) Sync(maxSize int, paths []string) error {
 
 func (sync *Sync) copy(remote FileData, local string) error {
 	if stat, err := os.Stat(local); os.IsNotExist(err) {
-		fmt.Printf("COPY\n  LOCAL: [%s]\n\n", remote.Name)
+		fmt.Printf("COPY\n  LOCAL: [%s]\n", local)
 		hash, err := sync.hash(remote.Name)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("HASH\n  LOCAL: [%s]\n%+v\n", remote.Name, hash)
 		err = sync.get(hash, local)
 		if err != nil {
 			return err
 		}
 	} else {
 		if stat.Size() == remote.Size {
-			fmt.Printf("EXIST\n  LOCAL: [%s]\n\n", remote.Name)
+			fmt.Printf("EXIST\n  LOCAL: [%s]\n", remote.Name)
 		} else {
 			fmt.Printf("CONTINUE\n  LOCAL: [%s]\n  SIZE REMOTE %v - LOCAL %v\n\n", remote.Name, remote.Size, stat.Size())
 		}
@@ -161,6 +163,15 @@ func (sync *Sync) copy(remote FileData, local string) error {
 func (sync *Sync) get(remote *FileHash, local string) error {
 	var b bytes.Buffer
 	hasher := sha256.New()
+
+	os.MkdirAll(filepath.Dir(local), 0777)
+
+	tempName := filepath.Dir(local) + "/." + filepath.Base(local)
+	fw, err := os.Create(tempName)
+	if err != nil {
+		return err
+	}
+	defer fw.Close()
 
 	for k, v := range remote.Hash {
 		session, err := sync.client.NewSession()
@@ -177,19 +188,27 @@ func (sync *Sync) get(remote *FileHash, local string) error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("GET PART %v FILE %s\n", k, remote.Name)
+		fmt.Printf("  GET PART %v\n", k)
 
 		bb := b.Bytes()
 
 		hasher.Reset()
 		hasher.Write(bb)
 
-		if !bytes.Equal(v, hasher.Sum(nil)) {
-			panic(fmt.Errorf("INVALID HASH %v (%v - %v) %s\n", k, len(bb), remote.Size, remote.Name))
+		hv := hasher.Sum(nil)
+		if !bytes.Equal(v, hv) {
+			panic(fmt.Errorf("  INVALID HASH [%v]\n  %v\n  %v\n", b.Len(), v, hv))
 		}
+		fmt.Printf("  VALID HASH\n")
+		fw.Write(bb)
 	}
-	fmt.Printf("VALID HASH %s\n", remote.Name)
-	return nil
+	err = fw.Sync()
+	fw.Close()
+
+	os.Rename(tempName, local)
+	fmt.Printf("  DONE\n")
+
+	return err
 }
 
 func (sync *Sync) hash(path string) (res *FileHash, err error) {
