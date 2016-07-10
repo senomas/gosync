@@ -5,7 +5,7 @@ import "time"
 // FileData struct
 type FileData struct {
 	Name  string    `json:"name,omitempty"`
-	Local string    `json:"name,omitempty"`
+	Local string    `json:"local,omitempty"`
 	Time  time.Time `json:"time,omitempty"`
 	Size  int64     `json:"size,omitempty"`
 	Hash  [][]byte  `json:"hash,omitempty"`
