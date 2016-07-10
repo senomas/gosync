@@ -24,3 +24,4 @@ gosync
 *.exe
 *.test
 *.prof
+data
