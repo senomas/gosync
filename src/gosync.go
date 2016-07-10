@@ -62,7 +62,7 @@ func main() {
 		check(err)
 
 		hasher := sha256.New()
-		res := sync.FileHash{Name: fp, Size: finfo.Size(), Time: finfo.ModTime()}
+		res := sync.FileData{Name: fp, Size: finfo.Size(), Time: finfo.ModTime()}
 
 		f, err := os.Open(fp)
 		check(err)

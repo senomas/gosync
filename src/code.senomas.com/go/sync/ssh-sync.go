@@ -160,7 +160,7 @@ func (sync *Sync) copy(remote FileData, local string) error {
 	return nil
 }
 
-func (sync *Sync) get(remote *FileHash, local string) error {
+func (sync *Sync) get(remote *FileData, local string) error {
 	var b bytes.Buffer
 	hasher := sha256.New()
 
@@ -211,7 +211,7 @@ func (sync *Sync) get(remote *FileHash, local string) error {
 	return err
 }
 
-func (sync *Sync) hash(path string) (res *FileHash, err error) {
+func (sync *Sync) hash(path string) (res *FileData, err error) {
 	session, err := sync.client.NewSession()
 	if err != nil {
 		return nil, err
@@ -228,7 +228,11 @@ func (sync *Sync) hash(path string) (res *FileHash, err error) {
 		return nil, err
 	}
 
-	res = &FileHash{}
+	res = &FileData{}
 	err = json.Unmarshal(b.Bytes(), res)
 	return res, err
+}
+
+func (sync *Sync) clean(list *FileDataList) error {
+	return nil
 }

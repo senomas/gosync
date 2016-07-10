@@ -4,22 +4,15 @@ import "time"
 
 // FileData struct
 type FileData struct {
-	Name string
-	Time time.Time
-	Size int64
+	Name string    `json:"name,omitempty"`
+	Time time.Time `json:"time,omitempty"`
+	Size int64     `json:"size,omitempty"`
+	Hash [][]byte  `json:"hash,omitempty"`
 }
 
 // FileDataList struct
 type FileDataList struct {
 	Files []FileData
-}
-
-// FileHash struct
-type FileHash struct {
-	Name string
-	Time time.Time
-	Size int64
-	Hash [][]byte
 }
 
 func (fl FileDataList) Len() int {
