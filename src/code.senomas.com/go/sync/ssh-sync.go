@@ -192,13 +192,14 @@ func (sync *Sync) get(remote *FileHash, local string) error {
 		fmt.Printf("  Part %v/%v\n", k+1, pl)
 
 		bb := b.Bytes()
+		b.Reset()
 
 		hasher.Reset()
 		hasher.Write(bb)
 
 		hv := hasher.Sum(nil)
 		if !bytes.Equal(v, hv) {
-			panic(fmt.Errorf("Invalid hash [%v]\n  %v\n  %v\n", b.Len(), v, hv))
+			panic(fmt.Errorf("Invalid hash [%v]\n  %v\n  %v\n", len(bb), v, hv))
 		}
 		fw.Write(bb)
 	}
