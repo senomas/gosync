@@ -17,6 +17,7 @@ type FileDataList struct {
 // FileHash struct
 type FileHash struct {
 	Name string
+	Time time.Time
 	Size int64
 	Hash [][]byte
 }

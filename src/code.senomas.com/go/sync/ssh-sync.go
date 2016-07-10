@@ -154,6 +154,10 @@ func (sync *Sync) copy(remote FileData, local string) error {
 	return nil
 }
 
+func (sync *Sync) get(remote FileHash, local string) error {
+	return nil
+}
+
 func (sync *Sync) hash(path string) (res *FileHash, err error) {
 	session, err := sync.client.NewSession()
 	if err != nil {
