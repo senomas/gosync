@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/user"
+	"path/filepath"
 	"regexp"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -84,6 +87,91 @@ func (sync *Sync) List(maxSize int, paths []string) (res *FileDataList, err erro
 	}
 
 	res = &FileDataList{}
+	err = json.Unmarshal(b.Bytes(), res)
+	return res, err
+}
+
+// Sync func
+func (sync *Sync) Sync(maxSize int, paths []string) error {
+	re, err := regexp.Compile("^([^:]*)(\\:(.*))?$")
+	if err != nil {
+		panic(err)
+	}
+
+	var rpaths, lpaths []string
+	for _, v := range paths {
+		px := re.FindStringSubmatch(v)
+		if !strings.HasSuffix(px[1], "/") {
+			px[1] += "/"
+		}
+		lpaths = append(lpaths, px[1])
+		if px[3] == "" {
+			rpaths = append(rpaths, px[1])
+		} else {
+			if !strings.HasSuffix(px[3], "/") {
+				px[3] += "/"
+			}
+			rpaths = append(rpaths, px[3])
+		}
+	}
+
+	res, err := sync.List(maxSize, rpaths)
+	if err != nil {
+		return err
+	}
+
+	for _, v := range res.Files {
+		for k, kv := range rpaths {
+			if strings.HasPrefix(v.Name, kv) {
+				fp, err := filepath.Abs(lpaths[k] + v.Name[len(kv):])
+				if err == nil {
+					sync.copy(v, fp)
+					break
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (sync *Sync) copy(remote FileData, local string) error {
+	if stat, err := os.Stat(local); os.IsNotExist(err) {
+		fmt.Printf("COPY\n  LOCAL: [%s]\n\n", remote.Name)
+		res, err := sync.hash(remote.Name)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("HASH\n  LOCAL: [%s]\n%+v\n", remote.Name, res)
+		// path/to/whatever does not exist
+	} else {
+		if stat.Size() == remote.Size {
+			fmt.Printf("EXIST\n  LOCAL: [%s]\n\n", remote.Name)
+		} else {
+			fmt.Printf("CONTINUE\n  LOCAL: [%s]\n  SIZE REMOTE %v - LOCAL %v\n\n", remote.Name, remote.Size, stat.Size())
+		}
+	}
+	return nil
+}
+
+func (sync *Sync) hash(path string) (res *FileHash, err error) {
+	session, err := sync.client.NewSession()
+	if err != nil {
+		return nil, err
+	}
+	defer session.Close()
+
+	var b bytes.Buffer
+	session.Stdout = &b
+
+	cmd := fmt.Sprintf("gosync hash \"%s\"", path)
+
+	err = session.Run(cmd)
+	if err != nil {
+		return nil, err
+	}
+
+	res = &FileHash{}
 	err = json.Unmarshal(b.Bytes(), res)
 	return res, err
 }

@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -79,7 +78,7 @@ func main() {
 				panic(err)
 			} else {
 				hasher.Write(buf[:n])
-				if i == 1024 {
+				if i == 64 {
 					res.Hash = append(res.Hash, base64.StdEncoding.EncodeToString(hasher.Sum(nil)))
 					i = 0
 				}
@@ -100,12 +99,12 @@ func main() {
 		part, err := strconv.ParseInt(os.Args[3], 10, 64)
 		check(err)
 
-		_, err = f.Seek(part*1048576, 0)
+		_, err = f.Seek(part*65536, 0)
 		check(err)
 
 		buf := make([]byte, 1024)
 
-		for i := 0; i < 1024; i++ {
+		for i := 0; i < 64; i++ {
 			n, err := f.Read(buf)
 			if err == io.EOF {
 				break
@@ -124,29 +123,9 @@ func main() {
 		maxSize, err := strconv.Atoi(os.Args[3])
 		check(err)
 
-		re, err := regexp.Compile("^([^:]*)(\\:(.*))?$")
+		err = sshSync.Sync(maxSize, os.Args[4:])
 		check(err)
 
-		var paths []string
-		for _, v := range os.Args[4:] {
-			px := re.FindStringSubmatch(v)
-			if px[3] == "" {
-				if !strings.HasSuffix(px[1], "/") {
-					px[1] += "/"
-				}
-				paths = append(paths, px[1])
-			} else {
-				if !strings.HasSuffix(px[3], "/") {
-					px[3] += "/"
-				}
-				paths = append(paths, px[3])
-			}
-		}
-
-		res, err := sshSync.List(maxSize, paths)
-		check(err)
-
-		fmt.Printf("RESULT %+v\n", res)
 	} else {
 		fmt.Printf("FORMAT\n  gosync list <max size in GB> <path>\n  gosync hash <file name>\n  gosync get <file name> <part>\n  gosync sync <user> <host> <path> [max size in GB]\n")
 	}
