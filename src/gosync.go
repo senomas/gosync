@@ -91,12 +91,12 @@ func main() {
 		b, _ := json.Marshal(res)
 		fmt.Println(string(b))
 	} else if len(os.Args) == 4 && os.Args[1] == "get" {
-		fp, _ := filepath.Abs(os.Args[2])
-
-		f, err := os.Open(fp)
+		part, err := strconv.ParseInt(os.Args[2], 10, 64)
 		check(err)
 
-		part, err := strconv.ParseInt(os.Args[3], 10, 64)
+		fp, _ := filepath.Abs(os.Args[3])
+
+		f, err := os.Open(fp)
 		check(err)
 
 		_, err = f.Seek(part*65536, 0)
