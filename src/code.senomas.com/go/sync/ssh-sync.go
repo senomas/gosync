@@ -171,7 +171,7 @@ func (sync *Sync) get(remote *FileHash, local string) error {
 
 		session.Stdout = &b
 
-		cmd := fmt.Sprintf("gosync get %v", k)
+		cmd := fmt.Sprintf("gosync get %v \"%s\"", k, remote.Name)
 
 		err = session.Run(cmd)
 		if err != nil {

@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -111,7 +110,8 @@ func main() {
 			} else if err != nil {
 				panic(err)
 			} else {
-				fmt.Println(base64.StdEncoding.EncodeToString(buf[:n]))
+				os.Stdout.Write(buf[:n])
+				// fmt.Println(base64.StdEncoding.EncodeToString(buf[:n]))
 			}
 		}
 	} else if len(os.Args) >= 5 && os.Args[1] == "sync" {
