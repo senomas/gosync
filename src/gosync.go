@@ -24,7 +24,10 @@ func main() {
 	if len(os.Args) > 3 && os.Args[1] == "list" {
 		res := sync.FileDataList{}
 		for i, l := 3, len(os.Args); i < l; i++ {
-			fp, _ := filepath.Abs(os.Args[i])
+			fp, err := filepath.Abs(os.Args[i])
+			if err != nil {
+				panic(err)
+			}
 			filepath.Walk(fp, func(path string, info os.FileInfo, err error) error {
 				if err != nil {
 					return err
@@ -34,7 +37,7 @@ func main() {
 					}
 				} else {
 					if !strings.HasPrefix(info.Name(), ".") {
-						res.Files = append(res.Files, sync.FileData{Name: path, Time: info.ModTime(), Size: info.Size()})
+						res.Files = append(res.Files, &sync.FileData{Name: path, Time: info.ModTime(), Size: info.Size()})
 					}
 				}
 				return err
@@ -44,7 +47,7 @@ func main() {
 		var maxLen, pLen int64
 		maxLen, _ = strconv.ParseInt(os.Args[2], 10, 64)
 		maxLen *= 1073741824
-		var nfs []sync.FileData
+		var nfs []*sync.FileData
 		for _, v := range res.Files {
 			pLen += v.Size
 			if maxLen == -1 || pLen < maxLen {

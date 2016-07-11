@@ -13,7 +13,7 @@ type FileData struct {
 
 // FileDataList struct
 type FileDataList struct {
-	Files []FileData
+	Files []*FileData
 }
 
 func (fl FileDataList) Len() int {

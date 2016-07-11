@@ -102,6 +102,10 @@ func (sync *Sync) Sync(maxSize int, paths []string) error {
 	var rpaths, lpaths []string
 	for _, v := range paths {
 		px := re.FindStringSubmatch(v)
+		px[1], err = filepath.Abs(px[1])
+		if err != nil {
+			panic(err)
+		}
 		if !strings.HasSuffix(px[1], "/") {
 			px[1] += "/"
 		}
@@ -124,45 +128,42 @@ func (sync *Sync) Sync(maxSize int, paths []string) error {
 	for _, v := range res.Files {
 		for k, kv := range rpaths {
 			if strings.HasPrefix(v.Name, kv) {
-				fp, err := filepath.Abs(lpaths[k] + v.Name[len(kv):])
-				if err == nil {
-					v.Local = fp
-					// err = sync.copy(v, fp)
-					// if err != nil {
-					// 	return err
-					// }
-					break
-				}
+				v.Local = lpaths[k] + v.Name[len(kv):]
+				break
 			}
 		}
 	}
 
-	fmt.Printf("HEREEEE\n")
 	for _, v := range res.Files {
-		// if v.Local != "" {
-		fmt.Printf("FILE\n  REMOTE: %s\n  LOCAL: %s\n", v.Name, v.Local)
-		// }
+		if v.Local != "" {
+			err = sync.copy(v)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	return nil
+	err = sync.clean(lpaths, res)
+
+	return err
 }
 
-func (sync *Sync) copy(remote FileData, local string) error {
-	if stat, err := os.Stat(local); os.IsNotExist(err) {
-		fmt.Printf("Copy %s\n", local)
-		hash, err := sync.hash(remote.Name)
+func (sync *Sync) copy(fd *FileData) error {
+	if stat, err := os.Stat(fd.Local); os.IsNotExist(err) {
+		fmt.Printf("Copy %s\n", fd.Local)
+		hash, err := sync.hash(fd.Name)
 		if err != nil {
 			return err
 		}
-		err = sync.get(hash, local)
+		err = sync.get(hash, fd.Local)
 		if err != nil {
 			return err
 		}
 	} else {
-		if stat.Size() == remote.Size {
-			fmt.Printf("Skip %s\n", remote.Name)
+		if stat.Size() == fd.Size {
+			fmt.Printf("Skip %s\n", fd.Name)
 		} else {
-			fmt.Printf("CONTINUE\n  LOCAL: [%s]\n  SIZE REMOTE %v - LOCAL %v\n\n", remote.Name, remote.Size, stat.Size())
+			fmt.Printf("CONTINUE\n  LOCAL: [%s]\n  SIZE REMOTE %v - LOCAL %v\n\n", fd.Name, fd.Size, stat.Size())
 		}
 	}
 	return nil
@@ -241,6 +242,42 @@ func (sync *Sync) hash(path string) (res *FileData, err error) {
 	return res, err
 }
 
-func (sync *Sync) clean(list *FileDataList) error {
+func (sync *Sync) clean(lpaths []string, list *FileDataList) error {
+	fmt.Println("CLEAN")
+	locals := make(map[string]*FileData)
+	for _, v := range list.Files {
+		if v.Local != "" {
+			locals[v.Local] = v
+		}
+	}
+	var dirty []string
+	for _, fp := range lpaths {
+		filepath.Walk(fp, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			} else if info.IsDir() {
+				used := false
+				for _, v := range list.Files {
+					if strings.HasPrefix(v.Local, path) {
+						used = true
+					}
+				}
+				if !used {
+					dirty = append(dirty, path)
+				}
+			} else {
+				if locals[path] == nil {
+					dirty = append(dirty, path)
+				}
+			}
+			return err
+		})
+	}
+
+	for i := len(dirty) - 1; i >= 0; i-- {
+		fp := dirty[i]
+		fmt.Printf("  REMOVE %s\n", fp)
+	}
+
 	return nil
 }
