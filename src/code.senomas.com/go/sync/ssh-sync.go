@@ -126,13 +126,20 @@ func (sync *Sync) Sync(maxSize int, paths []string) error {
 			if strings.HasPrefix(v.Name, kv) {
 				fp, err := filepath.Abs(lpaths[k] + v.Name[len(kv):])
 				if err == nil {
-					err = sync.copy(v, fp)
-					if err != nil {
-						return err
-					}
+					v.Local = fp
+					// err = sync.copy(v, fp)
+					// if err != nil {
+					// 	return err
+					// }
 					break
 				}
 			}
+		}
+	}
+
+	for _, v := range res.Files {
+		if v.Local != "" {
+			fmt.Printf("FILE %s\n", v.Local)
 		}
 	}
 
