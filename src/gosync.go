@@ -70,25 +70,19 @@ func main() {
 		f, err := os.Open(fp)
 		check(err)
 
-		buf := make([]byte, 1024)
+		buf := make([]byte, 65536)
 
 		for i := 1; ; i++ {
 			n, err := f.Read(buf)
 			if n > 0 {
 				hasher.Write(buf[:n])
-			}
-			if err == io.EOF {
 				res.Hash = append(res.Hash, hasher.Sum(nil))
 				hasher.Reset()
+			}
+			if err == io.EOF {
 				break
 			} else if err != nil {
 				panic(err)
-			} else {
-				if i == 64 {
-					res.Hash = append(res.Hash, hasher.Sum(nil))
-					hasher.Reset()
-					i = 0
-				}
 			}
 		}
 
@@ -106,18 +100,17 @@ func main() {
 		_, err = f.Seek(part*65536, 0)
 		check(err)
 
-		buf := make([]byte, 1024)
+		buf := make([]byte, 65536)
 
-		for i := 0; i < 64; i++ {
-			n, err := f.Read(buf)
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				panic(err)
-			} else {
-				os.Stdout.Write(buf[:n])
-				// fmt.Println(base64.StdEncoding.EncodeToString(buf[:n]))
-			}
+		n, err := f.Read(buf)
+		// if err == io.EOF {
+		// 	// skip
+		// } else
+		if err != nil {
+			panic(err)
+		} else {
+			os.Stdout.Write(buf[:n])
+			// fmt.Println(base64.StdEncoding.EncodeToString(buf[:n]))
 		}
 	} else if len(os.Args) >= 5 && os.Args[1] == "sync" {
 		sshSync := sync.Sync{}

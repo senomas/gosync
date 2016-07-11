@@ -176,14 +176,55 @@ func (sync *Sync) get(remote *FileData, local string) error {
 	os.MkdirAll(filepath.Dir(local), 0777)
 
 	tempName := filepath.Dir(local) + "/." + filepath.Base(local)
-	fw, err := os.Create(tempName)
+	fw, err := os.OpenFile(tempName, os.O_CREATE|os.O_RDWR|os.O_APPEND, 0664)
+	// fw, err := os.Create()
 	if err != nil {
 		return err
 	}
 	defer fw.Close()
 
+	_, err = fw.Seek(0, 0)
+	if err != nil {
+		return err
+	}
+
+	buf := make([]byte, 65536)
+
+	pi := 0
+	pil := len(remote.Hash)
+
+	fws, _ := fw.Stat()
+
+	fmt.Printf("  TPART %v\n", fws.Size()/65536)
+
+	// count := 0
+	for ; pi < pil; pi++ {
+		var n int
+		n, err = fw.Read(buf)
+		hasher.Reset()
+		hasher.Write(buf[:n])
+		hv := hasher.Sum(nil)
+		fmt.Printf("  READ %v\n", n)
+		if !bytes.Equal(remote.Hash[pi], hv) {
+			fmt.Printf("Invalid hash [%v]\n  %v\n  %v\n", n, remote.Hash[pi], hv)
+			// count++
+			// if count > 3 {
+			break
+			// }
+		} else {
+			fmt.Printf("  Skip %v\n", pi+1)
+		}
+	}
+
+	fmt.Printf("  CONTINUE %v\n", pi)
+
+	_, err = fw.Seek(int64(pi)*65536, 0)
+	if err != nil {
+		return err
+	}
+
 	pl := len(remote.Hash)
-	for k, v := range remote.Hash {
+	for ; pi < pil; pi++ {
 		session, err := sync.client.NewSession()
 		if err != nil {
 			return err
@@ -192,13 +233,13 @@ func (sync *Sync) get(remote *FileData, local string) error {
 
 		session.Stdout = &b
 
-		cmd := fmt.Sprintf("gosync get %v \"%s\"", k, remote.Name)
+		cmd := fmt.Sprintf("gosync get %v \"%s\"", pi, remote.Name)
 
 		err = session.Run(cmd)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("  Part %v/%v\n", k+1, pl)
+		fmt.Printf("  Part %v/%v\n", pi+1, pl)
 
 		bb := b.Bytes()
 		b.Reset()
@@ -207,8 +248,8 @@ func (sync *Sync) get(remote *FileData, local string) error {
 		hasher.Write(bb)
 
 		hv := hasher.Sum(nil)
-		if !bytes.Equal(v, hv) {
-			panic(fmt.Errorf("Invalid hash [%v]\n  %v\n  %v\n", len(bb), v, hv))
+		if !bytes.Equal(remote.Hash[pi], hv) {
+			panic(fmt.Errorf("Invalid hash [%v]\n  %v\n  %v\n", len(bb), remote.Hash[pi], hv))
 		}
 		fw.Write(bb)
 	}
@@ -243,7 +284,6 @@ func (sync *Sync) hash(path string) (res *FileData, err error) {
 }
 
 func (sync *Sync) clean(lpaths []string, list *FileDataList) error {
-	fmt.Println("CLEAN")
 	locals := make(map[string]*FileData)
 	for _, v := range list.Files {
 		if v.Local != "" {
@@ -276,7 +316,8 @@ func (sync *Sync) clean(lpaths []string, list *FileDataList) error {
 
 	for i := len(dirty) - 1; i >= 0; i-- {
 		fp := dirty[i]
-		fmt.Printf("  REMOVE %s\n", fp)
+		os.Remove(fp)
+		fmt.Printf("Remove %s\n", fp)
 	}
 
 	return nil
