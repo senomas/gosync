@@ -139,9 +139,9 @@ func (sync *Sync) Sync(maxSize int, paths []string) error {
 
 	fmt.Printf("HEREEEE\n")
 	for _, v := range res.Files {
-		if v.Local != "" {
-			fmt.Printf("FILE %s\n", v.Local)
-		}
+		// if v.Local != "" {
+		fmt.Printf("FILE\n  REMOTE: %s\n  LOCAL: %s\n", v.Name, v.Local)
+		// }
 	}
 
 	return nil
