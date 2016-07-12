@@ -163,7 +163,18 @@ func (sync *Sync) copy(fd *FileData) error {
 		if stat.Size() == fd.Size {
 			fmt.Printf("Skip %s\n", fd.Name)
 		} else {
-			fmt.Printf("CONTINUE\n  LOCAL: [%s]\n  SIZE REMOTE %v - LOCAL %v\n\n", fd.Name, fd.Size, stat.Size())
+			tempName := filepath.Dir(fd.Local) + "/." + filepath.Base(fd.Local)
+			os.Rename(fd.Local, tempName)
+
+			fmt.Printf("Copy %s\n", fd.Local)
+			hash, err := sync.hash(fd.Name)
+			if err != nil {
+				return err
+			}
+			err = sync.get(hash, fd.Local)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -193,32 +204,25 @@ func (sync *Sync) get(remote *FileData, local string) error {
 	pi := 0
 	pil := len(remote.Hash)
 
-	fws, _ := fw.Stat()
-
-	fmt.Printf("  TPART %v\n", fws.Size()/65536)
-
-	// count := 0
 	for ; pi < pil; pi++ {
 		var n int
 		n, err = fw.Read(buf)
 		hasher.Reset()
 		hasher.Write(buf[:n])
 		hv := hasher.Sum(nil)
-		fmt.Printf("  READ %v\n", n)
 		if !bytes.Equal(remote.Hash[pi], hv) {
-			fmt.Printf("Invalid hash [%v]\n  %v\n  %v\n", n, remote.Hash[pi], hv)
-			// count++
-			// if count > 3 {
+			// fmt.Printf("Invalid hash [%v]\n  %v\n  %v\n", n, remote.Hash[pi], hv)
 			break
-			// }
 		} else {
-			fmt.Printf("  Skip %v\n", pi+1)
+			fmt.Printf("  Skip %v                      \r", pi+1)
 		}
 	}
 
-	fmt.Printf("  CONTINUE %v\n", pi)
-
 	_, err = fw.Seek(int64(pi)*65536, 0)
+	if err != nil {
+		return err
+	}
+	err = fw.Truncate(int64(pi) * 65536)
 	if err != nil {
 		return err
 	}
@@ -235,11 +239,11 @@ func (sync *Sync) get(remote *FileData, local string) error {
 
 		cmd := fmt.Sprintf("gosync get %v \"%s\"", pi, remote.Name)
 
+		fmt.Printf("  Part %v/%v                      \r", pi+1, pl)
 		err = session.Run(cmd)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("  Part %v/%v\n", pi+1, pl)
 
 		bb := b.Bytes()
 		b.Reset()
@@ -257,6 +261,7 @@ func (sync *Sync) get(remote *FileData, local string) error {
 	fw.Close()
 
 	os.Rename(tempName, local)
+	fmt.Printf("                                               \r")
 
 	return err
 }
@@ -273,6 +278,7 @@ func (sync *Sync) hash(path string) (res *FileData, err error) {
 
 	cmd := fmt.Sprintf("gosync hash \"%s\"", path)
 
+	fmt.Printf("  Get hash                      \r")
 	err = session.Run(cmd)
 	if err != nil {
 		return nil, err
